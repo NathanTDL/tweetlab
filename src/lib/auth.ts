@@ -10,16 +10,16 @@ const pool = new Pool({
 export const auth = betterAuth({
     database: pool,
 
-    // Email/password disabled - Google only
+    // Email/password disabled - X (Twitter) only
     emailAndPassword: {
         enabled: false,
     },
 
-    // Google OAuth provider
+    // X (Twitter) OAuth provider
     socialProviders: {
-        google: {
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        twitter: {
+            clientId: process.env.TWITTER_CLIENT_ID!,
+            clientSecret: process.env.TWITTER_CLIENT_SECRET!,
         },
     },
 

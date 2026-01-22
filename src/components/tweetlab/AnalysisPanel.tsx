@@ -336,7 +336,7 @@ export function AnalysisPanel({ analysis, isLoading, onRegenerate, isRegeneratin
             </div>
 
             {/* SuperX Promo - Fixed at bottom */}
-            <div className="mt-auto pt-2 shrink-0 bg-background/95 backdrop-blur-sm z-10 pb-0">
+            <div className="mt-auto pt-2 shrink-0 bg-background/95 backdrop-blur-sm z-10 pb-0 pr-1">
                 <SuperXPromo compact={!!analysis} />
             </div>
         </div>
