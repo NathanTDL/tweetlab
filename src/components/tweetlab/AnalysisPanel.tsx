@@ -13,9 +13,10 @@ interface AnalysisPanelProps {
     onVariantClick?: (idx: number) => void;
     selectedVariantIdx?: number | null; // For visual feedback on selected variant
     showModelWarning?: boolean; // Show warning when using smaller model
+    premiumRemaining?: number; // How many premium queries left
 }
 
-export function AnalysisPanel({ analysis, isLoading, onRegenerate, isRegenerating, onVariantClick, selectedVariantIdx, showModelWarning }: AnalysisPanelProps) {
+export function AnalysisPanel({ analysis, isLoading, onRegenerate, isRegenerating, onVariantClick, selectedVariantIdx, showModelWarning, premiumRemaining }: AnalysisPanelProps) {
     const [variantPage, setVariantPage] = useState(0);
     const [instruction, setInstruction] = useState("");
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -123,20 +124,20 @@ export function AnalysisPanel({ analysis, isLoading, onRegenerate, isRegeneratin
                         href="https://superx.so/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-start gap-3 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors shrink-0 group"
+                        className="flex items-start gap-3 p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-colors shrink-0 group"
                     >
                         <div className="p-1.5 rounded-lg bg-amber-500/10 shrink-0">
                             <AlertTriangle className="h-4 w-4 text-amber-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-[13px] text-foreground font-medium leading-snug">
-                                Using a smaller AI model
+                            <p className="text-[12px] text-foreground font-medium leading-snug">
+                                Premium queries used up
                             </p>
-                            <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">
-                                Subscribe to SuperX for unlimited access to our most powerful models.
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                                Now using a smaller model. Get SuperX for unlimited premium AI.
                             </p>
                         </div>
-                        <ExternalLink className="h-4 w-4 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" />
+                        <ExternalLink className="h-3.5 w-3.5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
                     </a>
                 )}
 

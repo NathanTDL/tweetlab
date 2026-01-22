@@ -5,7 +5,7 @@ import { TweetComposer } from "./Composer";
 import { TweetCard } from "./TweetCard";
 import { SimulationLoader } from "./SimulationLoader";
 import { TweetAnalysis, TweetSuggestion } from "@/lib/types";
-import { Copy, Check, Home, MessageSquare, Sparkles, HelpCircle, Zap, TrendingUp, MessageCircle, ArrowLeft, Users, X } from "lucide-react";
+import { Copy, Check, Home, MessageSquare, Sparkles, HelpCircle, Zap, TrendingUp, MessageCircle, ArrowLeft, Users, X, Flame } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 
 
@@ -71,6 +71,8 @@ export function Timeline({
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [globalStats, setGlobalStats] = useState<number>(0);
     const [loadingPostId, setLoadingPostId] = useState<string | null>(null);
+    const [quotaExhausted, setQuotaExhausted] = useState(false);
+    const [resetTime, setResetTime] = useState<string | null>(null);
 
     // const [expandedReason, setExpandedReason] = useState<string | null>(null); // Lifted to parent
     const [dismissedPrompts, setDismissedPrompts] = useState<Set<string>>(new Set());
@@ -249,8 +251,11 @@ export function Timeline({
                 const errorData = await response.json();
                 // Remove the post since simulation failed
                 setPosts((prev) => prev.filter(p => p.id !== postId));
-                // Show error via alert or a more elegant UI message
-                alert(errorData.error || "Daily analysis limit reached. You can analyze up to 8 posts per day.");
+                // Set quota exhausted state to show the UI card
+                setQuotaExhausted(true);
+                if (errorData.resetAt) {
+                    setResetTime(errorData.resetAt);
+                }
                 onLoadingChange(false);
                 setLoadingPostId(null);
                 return;
@@ -361,7 +366,46 @@ export function Timeline({
                 <h1 className="text-xl font-bold">Home</h1>
             </div>
 
-            <TweetComposer onPost={handlePost} isLoading={isLoading} />
+            {quotaExhausted ? (
+                <div className="p-4 border-b border-border animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-900/10 to-transparent p-6 text-center">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl" />
+                        <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-20 h-20 bg-yellow-500/10 rounded-full blur-2xl" />
+
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 shadow-lg shadow-amber-500/25">
+                                <Flame className="h-7 w-7 text-white fill-white" />
+                            </div>
+
+                            <h2 className="mb-2 text-xl font-bold text-foreground">
+                                Daily Limit Reached
+                            </h2>
+
+                            <p className="mb-6 max-w-xs text-sm text-muted-foreground leading-relaxed">
+                                You've analyzed 8/8 tweets today. Upgrade to SuperX for unlimited access and advanced AI models.
+                            </p>
+
+                            <a
+                                href="https://superx.so/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group flex w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] hover:shadow-amber-500/30 active:scale-[0.98]"
+                            >
+                                Upgrade to SuperX
+                                <Flame className="h-4 w-4 fill-white/20" />
+                            </a>
+
+                            {resetTime && (
+                                <p className="mt-4 text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+                                    Resets in {Math.max(0, Math.ceil((new Date(resetTime).getTime() - Date.now()) / (1000 * 60 * 60)))} hours
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <TweetComposer onPost={handlePost} isLoading={isLoading} />
+            )}
 
             <div className="divide-y divide-border">
                 {posts.map((post) => (
