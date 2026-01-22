@@ -20,6 +20,12 @@ export const auth = betterAuth({
         twitter: {
             clientId: process.env.TWITTER_CLIENT_ID!,
             clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+            // Map Twitter profile username to user
+            mapProfileToUser: (profile) => {
+                return {
+                    username: profile.username || profile.screen_name || profile.data?.username,
+                };
+            },
         },
     },
 
@@ -46,6 +52,10 @@ export const auth = betterAuth({
 
     user: {
         additionalFields: {
+            username: {
+                type: "string",
+                required: false,
+            },
             bio: {
                 type: "string",
                 required: false,

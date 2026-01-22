@@ -53,18 +53,18 @@ export function UserProfile({ onLoginClick }: UserProfileProps) {
                             <AvatarFallback className="bg-gradient-to-br from-amber-500 to-yellow-600 text-white font-bold">
                                 {session.user.name
                                     ? session.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                                    : (session.user.email?.[0]?.toUpperCase() || "U")}
+                                    : "U"}
                             </AvatarFallback>
                         </Avatar>
                     </div>
 
-                    {/* Name and email - only on XL */}
+                    {/* Name and handle - only on XL */}
                     <div className="hidden xl:block flex-1 min-w-0 text-left">
                         <p className="font-bold text-[15px] truncate">
                             {session.user.name || "User"}
                         </p>
                         <p className="text-muted-foreground text-sm truncate">
-                            {session.user.email}
+                            @{(session.user as any).username || session.user.name?.replace(/\s+/g, '').toLowerCase() || "user"}
                         </p>
                     </div>
 
@@ -86,7 +86,7 @@ export function UserProfile({ onLoginClick }: UserProfileProps) {
                                 {session.user.name || "User"}
                             </p>
                             <p className="text-muted-foreground text-sm truncate">
-                                {session.user.email}
+                                @{(session.user as any).username || session.user.name?.replace(/\s+/g, '').toLowerCase() || "user"}
                             </p>
                         </div>
                     </DropdownMenu.Item>

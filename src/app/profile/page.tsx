@@ -142,7 +142,7 @@ export default function ProfilePage() {
                         {/* Name & Handle */}
                         <div className="mt-4">
                             <h1 className="text-2xl font-black tracking-tight leading-tight">{session.user.name}</h1>
-                            <span className="text-[15px] text-muted-foreground font-medium">@{session.user.email?.split('@')[0]}</span>
+                            <span className="text-[15px] text-muted-foreground font-medium">@{(session.user as any).username || session.user.name?.replace(/\s+/g, '').toLowerCase() || "user"}</span>
                         </div>
 
                         {/* Bio */}
@@ -239,7 +239,7 @@ export default function ProfilePage() {
                             <TweetCard
                                 key={item.id}
                                 name={session.user.name || "User"}
-                                handle={session.user.email?.split('@')[0] || "user"}
+                                handle={(session.user as any).username || session.user.name?.replace(/\s+/g, '').toLowerCase() || "user"}
                                 avatar={session.user.image}
                                 time={new Date(item.created_at).toLocaleDateString()}
                                 content={item.tweet_content}

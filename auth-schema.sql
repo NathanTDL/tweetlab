@@ -1,8 +1,7 @@
--- Better Auth Core Tables
--- SAFE VERSION - Uses CREATE IF NOT EXISTS instead of DROP
--- Run this SQL in your Supabase SQL Editor
+-- Better Auth Schema (Standard camelCase)
+-- Run this in Supabase SQL Editor to fix/create your auth tables
 
--- User table
+-- 1. User Table
 CREATE TABLE IF NOT EXISTS "user" (
     id TEXT PRIMARY KEY,
     name TEXT,
@@ -13,36 +12,39 @@ CREATE TABLE IF NOT EXISTS "user" (
     "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Session table
+-- Add username column if missing
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS username TEXT;
+
+-- 2. Session Table
 CREATE TABLE IF NOT EXISTS "session" (
     id TEXT PRIMARY KEY,
-    "expiresAt" TIMESTAMPTZ NOT NULL,
+    "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
     token TEXT UNIQUE NOT NULL,
-    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
-    "updatedAt" TIMESTAMPTZ DEFAULT NOW(),
+    "expiresAt" TIMESTAMPTZ NOT NULL,
     "ipAddress" TEXT,
     "userAgent" TEXT,
-    "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE
+    "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Account table (for OAuth providers)
+-- 3. Account Table (OAuth)
 CREATE TABLE IF NOT EXISTS "account" (
     id TEXT PRIMARY KEY,
+    "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
     "accountId" TEXT NOT NULL,
     "providerId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
     "accessToken" TEXT,
     "refreshToken" TEXT,
-    "idToken" TEXT,
     "accessTokenExpiresAt" TIMESTAMPTZ,
     "refreshTokenExpiresAt" TIMESTAMPTZ,
+    "idToken" TEXT,
     scope TEXT,
     password TEXT,
     "createdAt" TIMESTAMPTZ DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Verification table (for email verification, password reset, etc.)
+-- 4. Verification Table
 CREATE TABLE IF NOT EXISTS "verification" (
     id TEXT PRIMARY KEY,
     identifier TEXT NOT NULL,
@@ -52,37 +54,24 @@ CREATE TABLE IF NOT EXISTS "verification" (
     "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Post History table (for storing user simulations)
-CREATE TABLE IF NOT EXISTS post_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-    tweet_content TEXT NOT NULL,
-    analysis JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Create indexes (IF NOT EXISTS not supported for indexes, so we use DO block)
+-- 5. Fix Indexes (using DO block to assume safety)
 DO $$ 
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_session_user_id') THEN
-        CREATE INDEX idx_session_user_id ON "session"("userId");
-    END IF;
+    -- Session Indexes
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_session_token') THEN
         CREATE INDEX idx_session_token ON "session"(token);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_account_user_id') THEN
-        CREATE INDEX idx_account_user_id ON "account"("userId");
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_session_userId') THEN
+        CREATE INDEX "idx_session_userId" ON "session"("userId");
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_account_provider') THEN
-        CREATE INDEX idx_account_provider ON "account"("providerId", "accountId");
+
+    -- Account Indexes
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_account_userId') THEN
+        CREATE INDEX "idx_account_userId" ON "account"("userId");
     END IF;
+
+    -- User Indexes
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_user_email') THEN
-        CREATE INDEX idx_user_email ON "user"(email);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_post_history_user_id') THEN
-        CREATE INDEX idx_post_history_user_id ON post_history(user_id);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_post_history_created_at') THEN
-        CREATE INDEX idx_post_history_created_at ON post_history(created_at DESC);
+        CREATE INDEX idx_user_email ON "user"(email); 
     END IF;
 END $$;

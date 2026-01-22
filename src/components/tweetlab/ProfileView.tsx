@@ -80,7 +80,7 @@ export function ProfileView({ onBack }: ProfileViewProps) {
 
     const handle = userData.x_handle
         ? userData.x_handle.replace(/^@/, '')
-        : session.user.email?.split('@')[0];
+        : (session.user as any).username || session.user.name?.replace(/\s+/g, '').toLowerCase() || "user";
 
     return (
         <div className="flex flex-col w-full min-h-screen pb-20">
@@ -235,7 +235,7 @@ export function ProfileView({ onBack }: ProfileViewProps) {
                         <TweetCard
                             key={item.id}
                             name={session.user.name || "User"}
-                            handle={session.user.email?.split('@')[0] || "user"}
+                            handle={(session.user as any).username || session.user.name?.replace(/\s+/g, '').toLowerCase() || "user"}
                             avatar={session.user.image}
                             time={new Date(item.created_at).toLocaleDateString()}
                             content={item.tweet_content}
