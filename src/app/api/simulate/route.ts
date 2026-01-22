@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { simulateTweet } from "@/lib/gemini";
+import { simulateTweet } from "@/lib/openrouter";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { tweet, imageBase64, imageMimeType } = body;
+        const { tweet, imageBase64, imageMimeType, anonymousId } = body;
 
         if (!tweet || typeof tweet !== "string") {
             return NextResponse.json(
@@ -22,12 +23,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Fetch user context if authenticated
-        let userContext = undefined;
+        // Check authentication
         const session = await auth.api.getSession({
             headers: await headers(),
         });
 
+        const userId = session?.user?.id;
+
+        // Check usage limits
+        const usageResult = await checkUsageLimit(userId, anonymousId);
+        if (!usageResult.allowed) {
+            return NextResponse.json(
+                {
+                    error: "Daily analysis limit reached. You can analyze up to 8 posts per day.",
+                    remaining: 0,
+                    resetAt: usageResult.resetAt.toISOString(),
+                },
+                { status: 429 }
+            );
+        }
+
+        // Fetch user context if authenticated
+        let userContext = undefined;
         if (session?.user) {
             const { data: user } = await (await import("@/lib/supabase")).supabase
                 .from("user")
@@ -49,7 +66,13 @@ export async function POST(request: NextRequest) {
             ? { base64: imageBase64, mimeType: imageMimeType }
             : undefined;
 
-        const analysis = await simulateTweet(tweet, userContext, imageData);
+        // Determine model tier (first 3 queries get premium model)
+        const usePremium = usageResult.isPremiumTier;
+
+        const analysis = await simulateTweet(tweet, userContext, imageData, usePremium);
+
+        // Increment usage after successful analysis
+        await incrementUsage(userId, anonymousId);
 
         // Fire and forget stats increment and history save
         try {
@@ -67,7 +90,20 @@ export async function POST(request: NextRequest) {
             console.error("Failed to increment stats or save history:", err);
         }
 
-        return NextResponse.json(analysis);
+        // Include remaining analyses and tier info in response
+        const newUsage = await checkUsageLimit(userId, anonymousId);
+
+        return NextResponse.json({
+            ...analysis,
+            _usage: {
+                remaining: newUsage.remaining,
+                resetAt: newUsage.resetAt.toISOString(),
+            },
+            _tierInfo: {
+                isPremiumTier: usePremium,
+                premiumRemaining: usageResult.premiumRemaining,
+            }
+        });
     } catch (error) {
         console.error("Simulation error:", error);
         return NextResponse.json(

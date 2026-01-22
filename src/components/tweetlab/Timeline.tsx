@@ -40,6 +40,12 @@ interface TimelineProps {
     selectedHistoryItem?: any; // Using any to avoid circular import or duplication, but ideally should be HistoryItem
     onLoginClick: () => void;
     isLoading?: boolean;
+    expandedReason?: string | null;
+    onExpandedReasonChange?: (reason: string | null) => void;
+    onPostCreated?: (id: string) => void;
+    currentAnalysis?: TweetAnalysis | null; // Syncs variants when regenerated from AnalysisPanel
+    selectedVariantIdx?: number | null; // For highlighting selected variant
+    onModelTierChange?: (isPremium: boolean) => void; // Notify parent about model tier
 }
 
 export function Timeline({
@@ -51,7 +57,13 @@ export function Timeline({
     onScrollToTop,
     selectedHistoryItem,
     onLoginClick,
-    isLoading
+    isLoading,
+    expandedReason,
+    onExpandedReasonChange,
+    onPostCreated,
+    currentAnalysis,
+    selectedVariantIdx,
+    onModelTierChange
 }: TimelineProps) {
     const [posts, setPosts] = useState<Post[]>([]);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -59,7 +71,8 @@ export function Timeline({
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [globalStats, setGlobalStats] = useState<number>(0);
     const [loadingPostId, setLoadingPostId] = useState<string | null>(null);
-    const [expandedReason, setExpandedReason] = useState<string | null>(null);
+
+    // const [expandedReason, setExpandedReason] = useState<string | null>(null); // Lifted to parent
     const [dismissedPrompts, setDismissedPrompts] = useState<Set<string>>(new Set());
     const { data: session } = useSession();
 
@@ -105,11 +118,49 @@ export function Timeline({
         }
     }, [selectedHistoryItem, onTweetChange, onAnalysisUpdate]);
 
+    // Sync suggestions when analysis is regenerated from AnalysisPanel
+    useEffect(() => {
+        if (currentAnalysis?.suggestions && posts.length > 0) {
+            // Update the most recent post with new suggestions
+            setPosts((prevPosts) => {
+                const updatedPosts = [...prevPosts];
+                if (updatedPosts.length > 0 && updatedPosts[0].isSimulated) {
+                    updatedPosts[0] = {
+                        ...updatedPosts[0],
+                        suggestions: currentAnalysis.suggestions,
+                        baseStats: {
+                            views: currentAnalysis.predicted_views,
+                            likes: currentAnalysis.predicted_likes,
+                            reposts: currentAnalysis.predicted_retweets,
+                            comments: currentAnalysis.predicted_replies,
+                        },
+                    };
+                }
+                return updatedPosts;
+            });
+        }
+    }, [currentAnalysis]);
+
+    // Scroll to expanded variant
+    useEffect(() => {
+        if (expandedReason) {
+            // Small delay to allow render
+            setTimeout(() => {
+                const element = document.getElementById(`variant-${expandedReason}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        }
+    }, [expandedReason]);
+
     const handleCopy = (text: string, id: string) => {
         navigator.clipboard.writeText(text);
         setCopiedId(id);
         setTimeout(() => setCopiedId(null), 2000);
     };
+
+
 
     // Animate stats gradually after AI prediction comes in
     useEffect(() => {
@@ -169,7 +220,17 @@ export function Timeline({
         onTweetChange(content);
         onLoadingChange(true);
         onAnalysisUpdate(null);
+        onLoadingChange(true);
+        onAnalysisUpdate(null);
         setLoadingPostId(postId);
+        if (onPostCreated) onPostCreated(postId);
+
+        // Get or create anonymous ID from localStorage
+        let anonymousId = localStorage.getItem("tweetlab_anonymous_id");
+        if (!anonymousId) {
+            anonymousId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+            localStorage.setItem("tweetlab_anonymous_id", anonymousId);
+        }
 
         try {
             const response = await fetch("/api/simulate-stream", {
@@ -178,9 +239,22 @@ export function Timeline({
                 body: JSON.stringify({
                     tweet: content,
                     imageBase64: imageData?.base64,
-                    imageMimeType: imageData?.mimeType
+                    imageMimeType: imageData?.mimeType,
+                    anonymousId,
                 }),
             });
+
+            // Handle rate limit
+            if (response.status === 429) {
+                const errorData = await response.json();
+                // Remove the post since simulation failed
+                setPosts((prev) => prev.filter(p => p.id !== postId));
+                // Show error via alert or a more elegant UI message
+                alert(errorData.error || "Daily analysis limit reached. You can analyze up to 8 posts per day.");
+                onLoadingChange(false);
+                setLoadingPostId(null);
+                return;
+            }
 
             if (!response.ok) {
                 throw new Error("Simulation failed");
@@ -210,6 +284,12 @@ export function Timeline({
 
                         try {
                             const parsed = JSON.parse(data);
+                            // Handle tier info at the start of stream
+                            if (parsed._tierInfo) {
+                                if (onModelTierChange) {
+                                    onModelTierChange(parsed._tierInfo.isPremiumTier);
+                                }
+                            }
                             if (parsed.complete && parsed.analysis) {
                                 analysis = parsed.analysis as TweetAnalysis;
                             }
@@ -369,6 +449,7 @@ export function Timeline({
                                     return (
                                         <div
                                             key={idx}
+                                            id={`variant-${post.id}-${idx}`}
                                             className={`relative group border-b border-border last:border-b-0 bg-background hover:bg-secondary/5 transition-all duration-300 ${isExpanded ? 'min-h-[350px]' : ''}`}
                                         >
                                             {/* Minimal Question Mark Button */}
@@ -376,7 +457,9 @@ export function Timeline({
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setExpandedReason(isExpanded ? null : `${post.id}-${idx}`);
+                                                        if (onExpandedReasonChange) {
+                                                            onExpandedReasonChange(isExpanded ? null : `${post.id}-${idx}`);
+                                                        }
                                                     }}
                                                     className={`p-1.5 rounded-full transition-all duration-200 ${isExpanded ? 'bg-twitter-blue text-white rotate-180' : 'text-muted-foreground hover:bg-twitter-blue/10 hover:text-twitter-blue'}`}
                                                     title={isExpanded ? "Close analysis" : "View analysis"}
@@ -399,6 +482,7 @@ export function Timeline({
                                                     views={improvedStats.views}
                                                     isSimulated={false}
                                                     hideMenu={true}
+                                                    image={post.image}
                                                 />
 
                                                 {isExpanded && (
@@ -444,7 +528,7 @@ export function Timeline({
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setExpandedReason(null);
+                                                                        if (onExpandedReasonChange) onExpandedReasonChange(null);
                                                                     }}
                                                                     className="p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
                                                                 >

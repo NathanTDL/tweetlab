@@ -1,6 +1,43 @@
 import { ExternalLink, BarChart3, Users, Zap, ArrowRight } from "lucide-react";
 
-export function SuperXPromo() {
+interface SuperXPromoProps {
+    compact?: boolean;
+}
+
+export function SuperXPromo({ compact = false }: SuperXPromoProps) {
+    if (compact) {
+        // Compact version for when analysis is present
+        return (
+            <a
+                href="https://superx.so/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-gradient-to-r from-card to-amber-950/10 hover:border-amber-500/30 transition-all duration-300 group"
+            >
+                {/* Logo */}
+                <div className="h-11 w-11 shrink-0 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-md shadow-amber-500/20">
+                    <span className="text-xl">🔥</span>
+                </div>
+
+                {/* Text */}
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-[15px] leading-tight group-hover:text-amber-500 transition-colors">
+                        SuperX
+                    </h3>
+                    <p className="text-[12px] text-muted-foreground mt-0.5">
+                        Grow faster on 𝕏 with AI analytics
+                    </p>
+                </div>
+
+                {/* Arrow */}
+                <div className="p-2 rounded-lg bg-gradient-to-r from-amber-500/10 to-yellow-500/10 group-hover:from-amber-500/20 group-hover:to-yellow-500/20 transition-colors shrink-0">
+                    <ArrowRight size={16} className="text-amber-500" />
+                </div>
+            </a>
+        );
+    }
+
+    // Full version (original)
     return (
         <a
             href="https://superx.so/"

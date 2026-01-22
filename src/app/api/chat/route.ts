@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chatWithAI } from "@/lib/gemini";
+import { chatWithAI } from "@/lib/openrouter";
 
 export async function POST(request: NextRequest) {
     try {

@@ -1,8 +1,15 @@
-import { GoogleGenAI } from "@google/genai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText, generateObject, streamText } from "ai";
+import { z } from "zod";
 
-const ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY,
+// Initialize Google Generative AI provider
+// Checks multiple possible env variable names for the API key
+const google = createGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY,
 });
+
+// Model to use - gemini-2.5-flash-lite for cost efficiency
+const MODEL_ID = "gemini-2.5-flash-lite";
 
 // X Algorithm-Aware Simulation Prompt (Jan 2026 update)
 // Based on X's open-sourced recommendation algorithm
@@ -18,6 +25,135 @@ CRITICAL ALGORITHM FACTS YOU MUST USE:
 - Controversy and curiosity hooks trigger broader distribution
 
 YOUR TASK: Analyze this tweet HONESTLY. No sugarcoating. If it's weak, say so.
+
+RULES:
+- Single-word tweets get LOW scores and critical analysis
+- Generic tweets ("hi", "gm", "good morning") should score VERY LOW
+- Predictions must be REALISTIC, not inflated
+- ALL audience_reactions MUST be filled with specific, varied responses
+- Suggestions must IMPROVE reply potential specifically`;
+
+const CHAT_PROMPT = `TweetLab AI. Help improve tweets. Be concise.
+
+Context:`;
+
+// Zod schema for structured tweet analysis output
+const TweetAnalysisSchema = z.object({
+    tweet: z.string(),
+    predicted_likes: z.number(),
+    predicted_retweets: z.number(),
+    predicted_replies: z.number(),
+    predicted_quotes: z.number(),
+    predicted_views: z.number(),
+    engagement_outlook: z.enum(["Low", "Medium", "High"]),
+    engagement_justification: z.string(),
+    analysis: z.array(z.string()),
+    suggestions: z.array(z.object({
+        version: z.string(),
+        tweet: z.string(),
+        reason: z.string(),
+        audience_reactions: z.array(z.string()),
+    })),
+});
+
+export type TweetAnalysis = z.infer<typeof TweetAnalysisSchema>;
+
+interface UserContext {
+    bio?: string;
+    targetAudience?: string;
+    aiContext?: string;
+}
+
+interface ImageData {
+    base64: string;
+    mimeType: string;
+}
+
+export async function simulateTweet(
+    tweetContent: string,
+    context?: UserContext,
+    imageData?: ImageData
+): Promise<TweetAnalysis> {
+    try {
+        let prompt = SIMULATION_PROMPT;
+        if (context?.targetAudience) {
+            prompt += `\n[Audience: ${context.targetAudience}]`;
+        }
+
+        // Build messages array
+        const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: string; mimeType: string }> = [];
+
+        if (imageData) {
+            userContent.push({
+                type: "image",
+                image: `data:${imageData.mimeType};base64,${imageData.base64}`,
+                mimeType: imageData.mimeType,
+            });
+        }
+
+        userContent.push({
+            type: "text",
+            text: `Tweet to analyze: "${tweetContent}"`,
+        });
+
+        const { object } = await generateObject({
+            model: google(MODEL_ID),
+            system: prompt,
+            messages: [{ role: "user", content: userContent }],
+            schema: TweetAnalysisSchema,
+        });
+
+        return object;
+    } catch (error) {
+        console.error("Simulation error:", error);
+        throw error;
+    }
+}
+
+export async function chatWithAI(message: string, tweetContext?: string): Promise<string> {
+    try {
+        const systemPrompt = tweetContext
+            ? `${CHAT_PROMPT} "${tweetContext}"`
+            : `${CHAT_PROMPT} None`;
+
+        const { text } = await generateText({
+            model: google(MODEL_ID),
+            system: systemPrompt,
+            prompt: message,
+        });
+
+        return text || "Please try again.";
+    } catch (error) {
+        console.error("Chat error:", error);
+        throw error;
+    }
+}
+
+export async function* simulateTweetStream(
+    tweetContent: string,
+    context?: UserContext,
+    imageData?: ImageData
+): AsyncGenerator<{ partial?: string; complete?: boolean; analysis?: TweetAnalysis | { error: string } }> {
+    try {
+        let prompt = SIMULATION_PROMPT;
+        if (context?.targetAudience) {
+            prompt += `\n[Audience: ${context.targetAudience}]`;
+        }
+
+        // Build user content
+        const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: string; mimeType: string }> = [];
+
+        if (imageData) {
+            userContent.push({
+                type: "image",
+                image: `data:${imageData.mimeType};base64,${imageData.base64}`,
+                mimeType: imageData.mimeType,
+            });
+        }
+
+        userContent.push({
+            type: "text",
+            text: `Tweet to analyze: "${tweetContent}"
 
 OUTPUT FORMAT (JSON only):
 {
@@ -55,126 +191,38 @@ OUTPUT FORMAT (JSON only):
       "audience_reactions": ["Reaction 1", "Reaction 2", "Reaction 3"]
     }
   ]
-}
-
-RULES:
-- Single-word tweets get LOW scores and critical analysis
-- Generic tweets ("hi", "gm", "good morning") should score VERY LOW
-- Predictions must be REALISTIC, not inflated
-- ALL audience_reactions MUST be filled with specific, varied responses
-- Suggestions must IMPROVE reply potential specifically
-
-Tweet to analyze:`;
-
-const CHAT_PROMPT = `TweetLab AI. Help improve tweets. Be concise.
-
-Context:`;
-
-interface UserContext {
-    bio?: string;
-    targetAudience?: string;
-    aiContext?: string;
-}
-
-interface ImageData {
-    base64: string;
-    mimeType: string;
-}
-
-export async function simulateTweet(tweetContent: string, context?: UserContext, imageData?: ImageData) {
-    try {
-        let prompt = SIMULATION_PROMPT;
-        if (context?.targetAudience) {
-            prompt += `\n[Audience: ${context.targetAudience}]`;
-        }
-
-        type ContentPart = { text: string } | { inlineData: { mimeType: string; data: string } };
-        let contents: string | ContentPart[];
-        if (imageData) {
-            contents = [
-                { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } },
-                { text: `${prompt} "${tweetContent}"` },
-            ];
-        } else {
-            contents = `${prompt} "${tweetContent}"`;
-        }
-
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents,
-            config: {
-                responseMimeType: "application/json",
-            },
+}`,
         });
 
-        const text = response.text;
-        if (!text) throw new Error("No response");
-        return JSON.parse(text);
-    } catch (error) {
-        console.error("Simulation error:", error);
-        throw error;
-    }
-}
-
-export async function chatWithAI(message: string, tweetContext?: string) {
-    try {
-        const prompt = tweetContext
-            ? `${CHAT_PROMPT} "${tweetContext}"\n\nUser: ${message} `
-            : `${CHAT_PROMPT} None\n\nUser: ${message} `;
-
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
-
-        return response.text || "Please try again.";
-    } catch (error) {
-        console.error("Chat error:", error);
-        throw error;
-    }
-}
-
-export async function* simulateTweetStream(
-    tweetContent: string,
-    context?: UserContext,
-    imageData?: ImageData
-): AsyncGenerator<{ partial?: string; complete?: boolean; analysis?: unknown }> {
-    try {
-        let prompt = SIMULATION_PROMPT;
-        if (context?.targetAudience) {
-            prompt += `\n[Audience: ${context.targetAudience}]`;
-        }
-
-        type ContentPart = { text: string } | { inlineData: { mimeType: string; data: string } };
-        let contents: string | ContentPart[];
-        if (imageData) {
-            contents = [
-                { inlineData: { mimeType: imageData.mimeType, data: imageData.base64 } },
-                { text: `${prompt} "${tweetContent}"` },
-            ];
-        } else {
-            contents = `${prompt} "${tweetContent}"`;
-        }
-
-        const response = await ai.models.generateContentStream({
-            model: "gemini-2.5-flash",
-            contents,
-            config: {
-                responseMimeType: "application/json",
-            },
+        const result = streamText({
+            model: google(MODEL_ID),
+            system: prompt,
+            messages: [{ role: "user", content: userContent }],
         });
 
         let fullText = "";
-        for await (const chunk of response) {
-            const text = chunk.text;
-            if (text) {
-                fullText += text;
-                yield { partial: fullText };
-            }
+
+        for await (const chunk of result.textStream) {
+            fullText += chunk;
+            yield { partial: fullText };
         }
 
+        // Parse the final result
         try {
-            yield { complete: true, analysis: JSON.parse(fullText) };
+            // Clean up the response - remove markdown code blocks if present
+            let cleanedText = fullText.trim();
+            if (cleanedText.startsWith("```json")) {
+                cleanedText = cleanedText.slice(7);
+            } else if (cleanedText.startsWith("```")) {
+                cleanedText = cleanedText.slice(3);
+            }
+            if (cleanedText.endsWith("```")) {
+                cleanedText = cleanedText.slice(0, -3);
+            }
+            cleanedText = cleanedText.trim();
+
+            const parsed = JSON.parse(cleanedText);
+            yield { complete: true, analysis: parsed as TweetAnalysis };
         } catch {
             yield { complete: true, analysis: { error: "Parse failed" } };
         }

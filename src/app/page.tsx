@@ -27,6 +27,9 @@ export default function Page() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
   const [currentView, setCurrentView] = useState<'timeline' | 'leaderboard' | 'profile'>('timeline');
+  const [expandedReason, setExpandedReason] = useState<string | null>(null);
+  const [latestPostId, setLatestPostId] = useState<string | null>(null);
+  const [showModelWarning, setShowModelWarning] = useState(false);
 
   const handleHistorySelect = (item: any) => {
     setSelectedHistoryItem(item);
@@ -251,6 +254,11 @@ export default function Page() {
               selectedHistoryItem={selectedHistoryItem}
               onLoginClick={() => setIsLoginModalOpen(true)}
               isLoading={isLoading}
+              expandedReason={expandedReason}
+              onExpandedReasonChange={setExpandedReason}
+              onPostCreated={(id) => setLatestPostId(id)}
+              currentAnalysis={analysis}
+              onModelTierChange={(isPremium) => setShowModelWarning(!isPremium)}
             />
           ) : currentView === 'leaderboard' ? (
             <Leaderboard />
@@ -260,7 +268,7 @@ export default function Page() {
         </main>
 
         {/* Right Sidebar (Search/Analysis) - Always visible */}
-        <aside className="hidden lg:flex w-[380px] shrink-0 flex-col gap-4 p-4 pl-6 h-screen sticky top-0 overflow-y-auto">
+        <aside className="hidden lg:flex w-[380px] shrink-0 flex-col p-4 pl-6 h-screen sticky top-0 overflow-hidden">
           {/* If Profile View, Show SuperX Promo. If Timeline, Show Analysis */}
           {currentView === 'timeline' ? (
             <AnalysisPanel
@@ -268,6 +276,15 @@ export default function Page() {
               isLoading={isLoading}
               onRegenerate={handleRegenerate}
               isRegenerating={isRegenerating}
+              showModelWarning={showModelWarning}
+              selectedVariantIdx={expandedReason ? parseInt(expandedReason.split('-').pop() || '-1') : null}
+              onVariantClick={(idx) => {
+                if (latestPostId) {
+                  setExpandedReason(`${latestPostId}-${idx}`);
+                  // Also scroll to top or finding element logic if needed
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
             />
           ) : (
             <div className="mt-2">

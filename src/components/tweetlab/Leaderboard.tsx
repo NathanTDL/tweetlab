@@ -23,96 +23,7 @@ interface LeaderboardItemData {
     };
 }
 
-// Compact Tweet Card for Leaderboard List
-function LeaderboardItem({ item, rank, onShare }: { item: LeaderboardItemData; rank: number; onShare: (item: LeaderboardItemData, rank: number) => void }) {
-    const analysis = item.analysis;
-    if (!analysis) return null;
 
-    const user = item.user || { name: "Simulated User", handle: "", image: "", is_anonymous: false };
-    const displayName = user.name || "Simulated User";
-    const displayHandle = user.handle ? `@${user.handle.replace('@', '')}` : (user.is_anonymous ? "" : `@user_${item.id.slice(0, 4)}`);
-    // If anonymous, use a specific seed or generic avatar. If real but no image, use dicebear.
-    const avatarSrc = user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.is_anonymous ? 'anonymous' : item.id}`;
-
-    const handleProfileClick = (e: React.MouseEvent) => {
-        if (!user.is_anonymous && user.handle) {
-            e.stopPropagation();
-            window.open(`https://x.com/${user.handle.replace('@', '')}`, '_blank');
-        }
-    };
-
-    return (
-        <div className="group relative overflow-hidden rounded-xl border border-border bg-card/50 hover:bg-card/80 transition-all duration-300 cursor-pointer p-0">
-            <div className="flex gap-4 p-4">
-                {/* Rank Number */}
-                <div className="flex-shrink-0 w-8 flex flex-col items-center justify-start pt-1">
-                    <span className={`text-lg font-bold ${rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>#{rank}</span>
-                </div>
-
-                {/* Content similar to TweetCard */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-10 w-10 border border-border cursor-pointer hover:opacity-80 transition-opacity" onClick={handleProfileClick}>
-                                <AvatarImage src={avatarSrc} className="object-cover" />
-                                <AvatarFallback>{displayName[0]}</AvatarFallback>
-                            </Avatar>
-                            <div className="leading-tight">
-                                <div className="flex items-center gap-1">
-                                    <h3
-                                        className={`font-bold text-[15px] ${!user.is_anonymous && user.handle ? 'hover:underline cursor-pointer' : ''}`}
-                                        onClick={handleProfileClick}
-                                    >
-                                        {displayName}
-                                    </h3>
-                                </div>
-                                {displayHandle && <p className="text-[13px] text-muted-foreground">{displayHandle}</p>}
-                            </div>
-                        </div>
-
-                        {/* Share Button replacing Impact text - Aligned nicely */}
-                        <div className="flex flex-col items-end justify-center pl-4">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onShare(item, rank);
-                                }}
-                                className="group/share relative flex items-center justify-center p-2 rounded-full bg-yellow-500/10 hover:bg-yellow-500 text-yellow-600 hover:text-white transition-all duration-300 border border-yellow-500/20 hover:border-transparent"
-                                title="Share Score"
-                            >
-                                <Share2 size={16} className="transform group-hover/share:scale-110 transition-transform" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <p className="text-[15px] leading-relaxed whitespace-pre-wrap mb-3 text-foreground/90">
-                        {item.tweet_content}
-                    </p>
-
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-between text-muted-foreground max-w-md">
-                        <div className="flex items-center gap-1.5 text-xs group-hover:text-blue-400 transition-colors">
-                            <MessageCircle size={14} />
-                            <span>{analysis.predicted_replies}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs group-hover:text-green-400 transition-colors">
-                            <Repeat size={14} />
-                            <span>{analysis.predicted_retweets}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs group-hover:text-pink-400 transition-colors">
-                            <Heart size={14} />
-                            <span>{analysis.predicted_likes}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs group-hover:text-blue-400 transition-colors">
-                            <Eye size={14} />
-                            <span>{(analysis.predicted_views / 1000).toFixed(1)}k</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 export function Leaderboard() {
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardItemData[]>([]);
@@ -209,7 +120,7 @@ export function Leaderboard() {
                 }}
             />
 
-            <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 flex flex-col gap-4">
+            <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
@@ -391,14 +302,76 @@ export function Leaderboard() {
                             </div>
                         )}
 
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between px-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                <span>All Simulations</span>
-                            </div>
+                        <div className="rounded-xl border border-border bg-card/30 overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/5 bg-white/5 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                        <th className="px-4 py-3 w-[60px] text-center">Rank</th>
+                                        <th className="px-4 py-3 w-[250px]">User</th>
+                                        <th className="px-4 py-3">Tweet</th>
+                                        <th className="px-4 py-3 w-[200px] text-right">Impact Score</th>
+                                        <th className="px-4 py-3 w-[100px] text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {leaderboardData.map((item, index) => {
+                                        const user = item.user || { name: "Simulated User", handle: "", image: "", is_anonymous: false };
+                                        const displayName = user.name || "Simulated User";
+                                        const displayHandle = user.handle ? `@${user.handle.replace('@', '')}` : (user.is_anonymous ? "" : `@user_${item.id.slice(0, 4)}`);
+                                        const avatarSrc = user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.is_anonymous ? 'anonymous' : item.id}`;
+                                        const analysis = item.analysis;
 
-                            {leaderboardData.map((item, index) => (
-                                <LeaderboardItem key={item.id} item={item} rank={index + 1} onShare={openShareModal} />
-                            ))}
+                                        return (
+                                            <tr key={item.id} className="group hover:bg-white/5 transition-colors">
+                                                <td className="px-4 py-3 text-center font-mono text-muted-foreground group-hover:text-white">
+                                                    #{index + 1}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-8 w-8 border border-white/10">
+                                                            <AvatarImage src={avatarSrc} />
+                                                            <AvatarFallback>{displayName[0]}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[13px] font-medium text-white leading-tight">{displayName}</span>
+                                                            {displayHandle && <span className="text-[11px] text-muted-foreground">{displayHandle}</span>}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <p className="text-[13px] text-zinc-300 line-clamp-1 group-hover:text-zinc-100 transition-colors cursor-default" title={item.tweet_content}>
+                                                        {item.tweet_content}
+                                                    </p>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-4 text-[12px] text-muted-foreground">
+                                                        <div className="flex items-center gap-1">
+                                                            <Heart size={12} className="group-hover:text-pink-500 transition-colors" />
+                                                            <span>{analysis?.predicted_likes || 0}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Eye size={12} className="group-hover:text-blue-400 transition-colors" />
+                                                            <span>{((analysis?.predicted_views || 0) / 1000).toFixed(1)}k</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openShareModal(item, index + 1);
+                                                        }}
+                                                        className="p-1.5 rounded bg-white/5 hover:bg-yellow-500/20 text-muted-foreground hover:text-yellow-500 transition-colors"
+                                                        title="Share Score"
+                                                    >
+                                                        <Share2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     </>
                 )}

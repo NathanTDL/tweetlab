@@ -14,6 +14,7 @@ export function TweetComposer({ onPost, isLoading }: TweetComposerProps) {
     const [content, setContent] = useState("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,12 +35,38 @@ export function TweetComposer({ onPost, isLoading }: TweetComposerProps) {
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                setImagePreview(event.target?.result as string);
-            };
-            reader.readAsDataURL(file);
+            processFile(file);
+        }
+    };
+
+    const processFile = (file: File) => {
+        if (!file.type.startsWith('image/')) return;
+
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            setImagePreview(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            processFile(file);
         }
     };
 
@@ -79,7 +106,12 @@ export function TweetComposer({ onPost, isLoading }: TweetComposerProps) {
     const strokeDashoffset = circumference * (1 - progress);
 
     return (
-        <div className="flex gap-3 p-4 border-b border-border w-full">
+        <div
+            className={`flex gap-3 p-4 border-b border-border w-full transition-colors duration-200 ${isDragging ? 'bg-twitter-blue/10 border-twitter-blue/50' : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
             <div className="shrink-0">
                 <Avatar className="w-10 h-10 border border-border/50">
                     {session?.user?.image && (
@@ -127,6 +159,14 @@ export function TweetComposer({ onPost, isLoading }: TweetComposerProps) {
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {/* Drag Overlay Hint */}
+                {isDragging && !imagePreview && (
+                    <div className="mt-3 border-2 border-dashed border-twitter-blue rounded-xl p-8 flex flex-col items-center justify-center text-twitter-blue bg-twitter-blue/5 animate-in fade-in zoom-in-95">
+                        <ImagePlus className="w-8 h-8 mb-2" />
+                        <span className="font-semibold">Drop image here</span>
                     </div>
                 )}
 
