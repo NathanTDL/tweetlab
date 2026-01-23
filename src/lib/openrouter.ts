@@ -34,7 +34,7 @@ RULES:
 
 RESPOND WITH VALID JSON ONLY. No markdown, no explanation, just the JSON object.`;
 
-const CHAT_PROMPT = `TweetLab AI. Help improve tweets. Be concise.
+const CHAT_PROMPT = `PostLab AI. Help improve tweets. Be concise.
 
 Context:`;
 

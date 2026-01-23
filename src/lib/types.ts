@@ -1,4 +1,4 @@
-// Type definitions for TweetLab AI responses
+// Type definitions for PostLab AI responses
 
 export interface TweetSuggestion {
     version: "Curiosity" | "Authority" | "Controversy";

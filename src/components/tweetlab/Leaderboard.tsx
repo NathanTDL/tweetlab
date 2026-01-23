@@ -65,7 +65,7 @@ export function Leaderboard() {
         try {
             const dataUrl = await toPng(shareRef.current, { cacheBust: true, pixelRatio: 2 });
             const link = document.createElement('a');
-            link.download = `tweetlab-rank-${shareRank}-score-${shareData.calculated_score}.png`;
+            link.download = `postlab-rank-${shareRank}-score-${shareData.calculated_score}.png`;
             link.href = dataUrl;
             link.click();
         } catch (err) {
@@ -417,7 +417,7 @@ export function Leaderboard() {
                                         </div>
                                         <div className="flex items-center gap-2 opacity-60">
                                             <Trophy size={18} className="text-yellow-500" />
-                                            <span className="font-black tracking-tight text-white text-lg">TweetLab</span>
+                                            <span className="font-black tracking-tight text-white text-lg">PostLab</span>
                                         </div>
                                     </div>
 
@@ -447,7 +447,7 @@ export function Leaderboard() {
                                                 </div>
                                                 <div>
                                                     <p className="text-xl sm:text-2xl font-bold text-white leading-tight">{shareData.user?.name || "Anonymous"}</p>
-                                                    <p className="text-white/40 text-sm">@{shareData.user?.handle?.replace('@', '') || "tweetlab_user"}</p>
+                                                    <p className="text-white/40 text-sm">@{shareData.user?.handle?.replace('@', '') || "postlab_user"}</p>
                                                 </div>
                                             </div>
                                         </div>

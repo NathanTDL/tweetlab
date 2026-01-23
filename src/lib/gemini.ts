@@ -33,7 +33,7 @@ RULES:
 - ALL audience_reactions MUST be filled with specific, varied responses
 - Suggestions must IMPROVE reply potential specifically`;
 
-const CHAT_PROMPT = `TweetLab AI. Help improve tweets. Be concise.
+const CHAT_PROMPT = `PostLab AI. Help improve tweets. Be concise.
 
 Context:`;
 

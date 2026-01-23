@@ -60,7 +60,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                         {/* Title */}
                         <h2 className="text-2xl font-bold mb-2 tracking-tight">
-                            Welcome to TweetLab
+                            Welcome to PostLab
                         </h2>
 
                         {/* Subtitle */}
@@ -94,7 +94,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
                         {/* Terms text */}
                         <p className="mt-6 text-xs text-muted-foreground/70 max-w-[260px]">
-                            By continuing, you agree to TweetLab&apos;s Terms of Service and Privacy Policy.
+                            By continuing, you agree to PostLab&apos;s Terms of Service and Privacy Policy.
                         </p>
                     </div>
                 </div>

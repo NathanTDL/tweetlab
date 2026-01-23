@@ -171,7 +171,7 @@ export function Timeline({
         const targetPost = posts.find(p => p.id === currentPostId);
         if (!targetPost) return;
 
-        const targetStats = (window as any).__tweetlab_target_stats;
+        const targetStats = (window as any).__postlab_target_stats;
         if (!targetStats) return;
 
         const interval = setInterval(() => {
@@ -228,10 +228,10 @@ export function Timeline({
         if (onPostCreated) onPostCreated(postId);
 
         // Get or create anonymous ID from localStorage
-        let anonymousId = localStorage.getItem("tweetlab_anonymous_id");
+        let anonymousId = localStorage.getItem("postlab_anonymous_id");
         if (!anonymousId) {
             anonymousId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-            localStorage.setItem("tweetlab_anonymous_id", anonymousId);
+            localStorage.setItem("postlab_anonymous_id", anonymousId);
         }
 
         try {
@@ -313,7 +313,7 @@ export function Timeline({
                     comments: analysis.predicted_replies,
                 };
 
-                (window as any).__tweetlab_target_stats = baseStats;
+                (window as any).__postlab_target_stats = baseStats;
 
                 setPosts((prev) =>
                     prev.map((p) =>
@@ -333,7 +333,7 @@ export function Timeline({
                 reposts: Math.floor(Math.random() * 50) + 2,
                 comments: Math.floor(Math.random() * 30) + 1,
             };
-            (window as any).__tweetlab_target_stats = fallbackStats;
+            (window as any).__postlab_target_stats = fallbackStats;
             setCurrentPostId(postId);
             setIsAnimating(true);
         } finally {
@@ -665,7 +665,7 @@ export function Timeline({
                                 Test your tweet before you post it.
                             </h2>
                             <p className="hidden sm:block text-muted-foreground text-[15px] leading-relaxed">
-                                TweetLab simulates how X will react to your tweet likes, replies, reposts, and engagement so you can improve it before it goes live.
+                                PostLab simulates how X will react to your tweet likes, replies, reposts, and engagement so you can improve it before it goes live.
                             </p>
 
                             {/* Global Stats */}

@@ -9,7 +9,6 @@ const pool = new Pool({
 
 export const auth = betterAuth({
     database: pool,
-    basePath: process.env.NODE_ENV === 'production' ? "/tools/postlab/api/auth" : "/api/auth",
 
     // Email/password disabled - X (Twitter) only
     emailAndPassword: {

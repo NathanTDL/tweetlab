@@ -133,7 +133,7 @@ export default function Page() {
                   <FlaskConical className="w-7 h-7 text-yellow-500" strokeWidth={2.5} />
                 </div>
                 <span className="hidden xl:block text-xl font-bold tracking-tight">
-                  TweetLab
+                  PostLab
                 </span>
               </button>
 
